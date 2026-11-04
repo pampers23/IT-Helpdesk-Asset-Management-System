@@ -6,4 +6,22 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService
   ) {}
+
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+  }
 }
