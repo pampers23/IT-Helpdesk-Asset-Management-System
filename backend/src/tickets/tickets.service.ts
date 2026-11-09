@@ -4,6 +4,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UserRole } from '../../generated/prisma/enums';
 import { Prisma } from 'generated/prisma/client';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 
 @Injectable()
 export class TicketsService {
@@ -137,4 +138,73 @@ export class TicketsService {
         }
      });
    }
+
+   async updateStatus(
+  ticketId: number,
+  userId: number,
+  role: UserRole,
+  dto: UpdateTicketStatusDto,
+) {
+  const ticket = await this.prisma.ticket.findUnique({
+    where: {
+      id: ticketId,
+    },
+    select: {
+      id: true,
+      assignedToId: true,
+    },
+  });
+
+  if (!ticket) {
+    throw new NotFoundException('Ticket not found');
+  }
+
+  if (role !== UserRole.ADMIN && role !== UserRole.IT_TECHNICIAN) {
+    throw new ForbiddenException('You cannot update ticket status');
+  }
+
+  if (
+    role === UserRole.IT_TECHNICIAN &&
+    ticket.assignedToId !== userId
+  ) {
+    throw new ForbiddenException('You can only update tickets assigned to you');
+  }
+
+  return this.prisma.ticket.update({
+    where: {
+      id: ticketId,
+    },
+    data: {
+      status: dto.status,
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      status: true,
+      priority: true,
+      category: true,
+      createdAt: true,
+      updatedAt: true,
+      createdBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignedTo: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+}
 }

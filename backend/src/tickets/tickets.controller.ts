@@ -7,6 +7,7 @@ import { UserRole } from '../../generated/prisma/enums';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 
 @Controller('tickets')
 export class TicketsController {
@@ -40,5 +41,17 @@ export class TicketsController {
     @Body() dto: AssignTicketDto
   ) {
     return this.ticketsService.assignTicket(id, dto)
+  }
+
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN)
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTicketStatusDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('role') role: UserRole
+  ) {
+    return this.ticketsService.updateStatus(id, userId, role, dto);
   }
 }
