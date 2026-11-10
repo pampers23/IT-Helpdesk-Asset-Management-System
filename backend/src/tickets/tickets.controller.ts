@@ -54,4 +54,15 @@ export class TicketsController {
   ) {
     return this.ticketsService.updateStatus(id, userId, role, dto);
   }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EMPLOYEE, UserRole.IT_TECHNICIAN)
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('role') role: UserRole
+  ) {
+    return this.ticketsService.findOne(id, userId, role)
+  }
 }
