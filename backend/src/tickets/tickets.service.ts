@@ -26,80 +26,101 @@ export class TicketsService {
   }
 
   async findAll(createdById: number, role: UserRole, filters: FilterTicketDto) {
-    let where: Prisma.TicketWhereInput = {};
+      const page = filters.page ?? 1;
+      const limit = filters.limit ?? 10;
+      const skip = (page - 1) * limit;
 
-    if (role === UserRole.EMPLOYEE) {
-      where = {
-        createdById: createdById,
-      };
-    } else if (role === UserRole.IT_TECHNICIAN) {
-      where ={
-        assignedToId: createdById,
-      };
-    }
+      let where: Prisma.TicketWhereInput = {};
 
-    if (filters.status) {
-      where.status = filters.status;
-    }
+      if (role === UserRole.EMPLOYEE) {
+        where = {
+          createdById: createdById,
+        };
+      } else if (role === UserRole.IT_TECHNICIAN) {
+        where = {
+          assignedToId: createdById,
+        };
+      }
 
-    if (filters.priority) {
-      where.priority = filters.priority;
-    }
+      if (filters.status) {
+        where.status = filters.status;
+      }
 
-    if (filters.category) {
-      where.category = filters.category
-    }
+      if (filters.priority) {
+        where.priority = filters.priority;
+      }
 
-    if (filters.search) {
-      where.OR = [
-        {
-          title: {
-            contains: filters.search
+      if (filters.category) {
+        where.category = filters.category;
+      }
+
+      if (filters.search) {
+        where.OR = [
+          {
+            title: {
+              contains: filters.search,
+            },
           },
-        },
-        {
-          description: {
-          contains: filters.search
-        }
-        }
-      ]
-    }
-
-     return this.prisma.ticket.findMany({
-      where: where,
-       orderBy: {
-         createdAt: 'desc'
-       },
-       select: {
-          id: true,
-          title: true,
-          description: true,
-          category: true,
-          priority: true,
-          status: true,
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              role: true,
-            }
+          {
+            description: {
+              contains: filters.search,
+            },
           },
-          createdAt: true,
-          updatedAt: true,
-          assignedTo: {
+        ];
+      }
+
+      const [tickets, totalTickets] = await this.prisma.$transaction([
+        this.prisma.ticket.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: {
+            createdAt: 'desc',
+          },
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            role: true,
-          }
-        }
-       },
-    });
-  }
+            title: true,
+            description: true,
+            category: true,
+            priority: true,
+            status: true,
+            createdBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+            createdAt: true,
+            updatedAt: true,
+            assignedTo: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        }),
+        this.prisma.ticket.count({
+          where,
+        }),
+      ]);
+
+      return {
+        data: tickets,
+        meta: {
+          total: totalTickets,
+          currentPage: page,
+          limit,
+          totalPages: Math.ceil(totalTickets / limit),
+        },
+      };
+    }
 
    async assignTicket (ticketId: number, dto: AssignTicketDto) {
      const ticket = await this.prisma.ticket.findUnique({
