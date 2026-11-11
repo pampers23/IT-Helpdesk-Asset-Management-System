@@ -1,5 +1,6 @@
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import { TicketCategory, TicketPriority, TicketStatus } from "../../../generated/prisma/enums";
+import { Type } from "class-transformer";
 
 export class FilterTicketDto {
   @IsOptional()
@@ -17,4 +18,17 @@ export class FilterTicketDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  @IsOptional()
+  page?: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @Type(() => Number)
+  @IsOptional()
+  limit?: number;
 }
