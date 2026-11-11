@@ -5,8 +5,7 @@ import { UserRole } from '../../generated/prisma/enums';
 import { Prisma } from 'generated/prisma/client';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
-import { FilterTicketDto } from './dto/filter-ticket.dto';
-import { contains } from 'class-validator';
+import { FilterTicketDto, SortOrder, TicketSortBy } from './dto/filter-ticket.dto';
 
 @Injectable()
 export class TicketsService {
@@ -29,6 +28,8 @@ export class TicketsService {
       const page = filters.page ?? 1;
       const limit = filters.limit ?? 10;
       const skip = (page - 1) * limit;
+      const sortBy = filters.sortBy ?? TicketSortBy.createdAt;
+      const sortOrder = filters.sortOrder ?? SortOrder.desc;
 
       let where: Prisma.TicketWhereInput = {};
 
@@ -74,9 +75,10 @@ export class TicketsService {
           where,
           skip,
           take: limit,
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: [
+            { [sortBy]: sortOrder },
+            { id: 'asc' },
+          ],
           select: {
             id: true,
             title: true,
