@@ -122,7 +122,7 @@ export class TicketsService {
           totalPages: Math.ceil(totalTickets / limit),
         },
       };
-    }
+  }
 
    async assignTicket (ticketId: number, dto: AssignTicketDto) {
      const ticket = await this.prisma.ticket.findUnique({
