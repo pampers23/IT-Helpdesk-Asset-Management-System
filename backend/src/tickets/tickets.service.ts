@@ -5,6 +5,8 @@ import { UserRole } from '../../generated/prisma/enums';
 import { Prisma } from 'generated/prisma/client';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+import { FilterTicketDto } from './dto/filter-ticket.dto';
+import { contains } from 'class-validator';
 
 @Injectable()
 export class TicketsService {
@@ -23,7 +25,7 @@ export class TicketsService {
     return ticket;
   }
 
-  async findAll(createdById: number, role: UserRole) {
+  async findAll(createdById: number, role: UserRole, filters: FilterTicketDto) {
     let where: Prisma.TicketWhereInput = {};
 
     if (role === UserRole.EMPLOYEE) {
@@ -34,6 +36,33 @@ export class TicketsService {
       where ={
         assignedToId: createdById,
       };
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.priority) {
+      where.priority = filters.priority;
+    }
+
+    if (filters.category) {
+      where.category = filters.category
+    }
+
+    if (filters.search) {
+      where.OR = [
+        {
+          title: {
+            contains: filters.search
+          },
+        },
+        {
+          description: {
+          contains: filters.search
+        }
+        }
+      ]
     }
 
      return this.prisma.ticket.findMany({

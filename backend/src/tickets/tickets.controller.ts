@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Body, Get, Patch, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, UseGuards, Body, Get, Patch, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
@@ -8,6 +8,7 @@ import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+import { FilterTicketDto } from './dto/filter-ticket.dto';
 
 @Controller('tickets')
 export class TicketsController {
@@ -28,9 +29,10 @@ export class TicketsController {
   @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN, UserRole.EMPLOYEE)
   findAll(
     @CurrentUser('id') userId: number,
-    @CurrentUser('role') role: UserRole
+    @CurrentUser('role') role: UserRole,
+    @Query() filters: FilterTicketDto
   ) {
-    return this.ticketsService.findAll(userId, role);
+    return this.ticketsService.findAll(userId, role, filters);
   }
 
   @Patch(':id/assign')
