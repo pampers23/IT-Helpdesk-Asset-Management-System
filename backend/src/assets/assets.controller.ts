@@ -6,6 +6,7 @@ import { UserRole } from '../../generated/prisma/enums';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { AssignedAssetDto } from './dto/assign.asset.dto';
+import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 
 @Controller('assets')
 export class AssetsController {
@@ -41,9 +42,10 @@ export class AssetsController {
   @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN)
   assign(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AssignedAssetDto
+    @Body() dto: AssignedAssetDto,
+    @CurrentUser() user: { id: number },
   ) {
-    return this.assetsService.assign(id, dto)
+    return this.assetsService.assign(id, dto, user)
   }
 
   @Patch(':id/unassign')
@@ -51,7 +53,17 @@ export class AssetsController {
   @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN)
   unassign(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: { id: number }
   ) {
-    return this.assetsService.unassign(id);
+    return this.assetsService.unassign(id, user);
+  }
+
+  @Get(':id/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN)
+  getHistory(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.assetsService.getHistory(id);
   }
 }
