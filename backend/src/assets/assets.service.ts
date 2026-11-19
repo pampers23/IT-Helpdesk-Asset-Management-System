@@ -4,6 +4,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AssetStatus, Prisma, UserRole } from '../../generated/prisma/client';
 import { AssignedAssetDto } from './dto/assign.asset.dto';
+import { AssetHistoryAction } from '../../generated/prisma/enums';
 
 @Injectable()
 export class AssetsService {
@@ -79,13 +80,14 @@ export class AssetsService {
     return asset;
   }
 
-  async assign(id: number, dto: AssignedAssetDto) {
+  
+  async assign(id: number, dto: AssignedAssetDto, user: { id: number }) {
     const asset = await this.prisma.asset.findUnique({
       where: { id },
-    })
+    });
 
     if (!asset) {
-      throw new NotFoundException('Asset not found')
+      throw new NotFoundException('Asset not found');
     }
 
     const assignee = await this.prisma.user.findFirst({
@@ -94,44 +96,94 @@ export class AssetsService {
         role: UserRole.EMPLOYEE,
         isActive: true,
       },
-    })
+    });
 
     if (!assignee) {
-      throw new NotFoundException('Active employee not found')
+      throw new NotFoundException('Active employee not found');
     }
 
     if (asset.status !== AssetStatus.AVAILABLE) {
-      throw new ConflictException('Asset is not available for assignment')
+      throw new ConflictException('Asset is not available for assignment');
     }
 
-    return this.prisma.asset.update({
-      where: { id },
-      data: {
-        assignedToId: dto.assignedToId,
-        status: AssetStatus.ASSIGNED
-      }
-    })
+    return this.prisma.$transaction(async (tx) => {
+      const updatedAsset = await tx.asset.update({
+        where: { id },
+        data: {
+          assignedToId: dto.assignedToId,
+          status: AssetStatus.ASSIGNED,
+        },
+      });
+
+      await tx.assetHistory.create({
+        data: {
+          action: AssetHistoryAction.ASSIGNED,
+          assetId: id,
+          employeeId: dto.assignedToId,
+          performedById: user.id,
+        },
+      });
+
+      return updatedAsset;
+    });
   }
 
-  async unassign(id: number) {
+
+  
+  async unassign(id: number, user: { id: number }) {
     const asset = await this.prisma.asset.findUnique({
-      where: { id }
-    })
+      where: { id },
+    });
 
     if (!asset) {
-      throw new NotFoundException('Asset does not exist')
+      throw new NotFoundException('Asset does not exist');
     }
 
-    if (asset.status !== AssetStatus.ASSIGNED) {
-      throw new ConflictException('It was not assigned')
+    if (asset.status !== AssetStatus.ASSIGNED || !asset.assignedToId) {
+      throw new ConflictException('Asset is not assigned');
     }
 
-    return this.prisma.asset.update({
+    // Preserve the previous employee's ID
+    const previousEmployeeId = asset.assignedToId;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedAsset = await tx.asset.update({
+        where: { id },
+        data: {
+          assignedToId: null,
+          status: AssetStatus.AVAILABLE,
+        },
+      });
+
+      await tx.assetHistory.create({
+        data: {
+          action: AssetHistoryAction.UNASSIGNED,
+          assetId: id,
+          employeeId: previousEmployeeId,
+          performedById: user.id,
+        },
+      });
+
+      return updatedAsset;
+    });
+  }
+
+  async getHistory(id: number) {
+    const asset = await this.prisma.asset.findMany({
       where: { id },
-      data: {
-        assignedToId: null,
-        status: AssetStatus.AVAILABLE
+    });
+
+    const history = await this.prisma.assetHistory.findMany({
+      where: { assetId: id },
+      orderBy: {
+        createdAt: 'desc'
       }
     })
+
+    if (history.length === 0) {
+      throw new NotFoundException('History not found');
+    }
+
+    return history;
   }
 }

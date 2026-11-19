@@ -65,6 +65,11 @@ enum AssetCondition {
   DAMAGED
 }
 
+enum AssetHistoryAction {
+  ASSIGNED
+  UNASSIGNED
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   firstName String
@@ -76,9 +81,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdTickets  Ticket[] @relation("TicketCreator")
-  assignedTickets Ticket[] @relation("TicketAssignee")
-  assignedAsset   Asset[]  @relation("AssetAssignee")
+  createdTickets         Ticket[]       @relation("TicketCreator")
+  assignedTickets        Ticket[]       @relation("TicketAssignee")
+  assignedAsset          Asset[]        @relation("AssetAssignee")
+  assetHistoryAsEmployee AssetHistory[] @relation("AssetHistoryEmployee")
+  assetHistoryPerformed  AssetHistory[] @relation("AssetHistoryPerformedBy")
 }
 
 model Ticket {
@@ -114,6 +121,24 @@ model Asset {
   assignedToId Int?
   assignedTo   User? @relation("AssetAssignee", fields: [assignedToId], references: [id])
 
+  history AssetHistory[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AssetHistory {
+  id     Int                @id @default(autoincrement())
+  action AssetHistoryAction
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id])
+
+  employeeId Int
+  employee   User @relation("AssetHistoryEmployee", fields: [employeeId], references: [id])
+
+  performedById Int
+  performedBy   User @relation("AssetHistoryPerformedBy", fields: [performedById], references: [id])
+
+  createdAt DateTime @default(now())
 }
