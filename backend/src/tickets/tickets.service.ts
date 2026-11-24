@@ -12,13 +12,24 @@ export class TicketsService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateTicketDto, createdById: number) {
+    if (dto.assetId !== undefined) {
+      const asset = await this.prisma.asset.findUnique({
+        where: { id: dto.assetId }
+      });
+
+      if (!asset) {
+        throw new NotFoundException('Asset not found');
+      }
+    }
+
     const ticket = await this.prisma.ticket.create({
       data: {
         title: dto.title,
         description: dto.description,
         category: dto.category,
         priority: dto.priority,
-        createdById
+        createdById,
+        assetId: dto.assetId,
       }
     })
     return ticket;
@@ -105,6 +116,19 @@ export class TicketsService {
                 email: true,
                 role: true,
               },
+            },
+            asset: {
+              select: {
+                id: true,
+                assetTag: true,
+                name: true,
+                category: true,
+                status: true,
+                condition: true,
+                brand: true,
+                model: true,
+                serialNumber: true,
+              }
             },
           },
         }),
@@ -311,8 +335,21 @@ export class TicketsService {
             lastName: true,
             email: true,
             role: true,
-          }
-        }
+          },
+        },
+        asset: {
+            select: {
+              id: true,
+              assetTag: true,
+              name: true,
+              category: true,
+              status: true,
+              condition: true,
+              brand: true,
+              model: true,
+              serialNumber: true,
+            },
+          },
       },
     });
   }
