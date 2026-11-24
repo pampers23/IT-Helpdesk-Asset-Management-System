@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString } from "class-validator";
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { TicketPriority } from '../../../generated/prisma/enums';
 import { TicketCategory } from '../../../generated/prisma/enums';
 
@@ -16,4 +16,9 @@ export class CreateTicketDto {
 
   @IsEnum(TicketPriority)
   priority!: TicketPriority;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  assetId?: number;
 }

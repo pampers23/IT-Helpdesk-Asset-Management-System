@@ -102,6 +102,9 @@ model Ticket {
   assignedToId Int?
   assignedTo   User? @relation("TicketAssignee", fields: [assignedToId], references: [id])
 
+  assetId Int?
+  asset   Asset? @relation(fields: [assetId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -122,6 +125,7 @@ model Asset {
   assignedTo   User? @relation("AssetAssignee", fields: [assignedToId], references: [id])
 
   history AssetHistory[]
+  tickets Ticket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
