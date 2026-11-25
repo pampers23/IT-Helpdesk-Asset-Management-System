@@ -7,6 +7,7 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { AssignedAssetDto } from './dto/assign.asset.dto';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { UpdateAssetStatusDto } from './dto/update-asset.dto';
 
 @Controller('assets')
 export class AssetsController {
@@ -65,5 +66,16 @@ export class AssetsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.assetsService.getHistory(id);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.IT_TECHNICIAN)
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateAssetStatusDto,
+    @CurrentUser() user: { id: number }
+  ) {
+    return this.assetsService.updateStatus(id, dto, user.id);
   }
 }

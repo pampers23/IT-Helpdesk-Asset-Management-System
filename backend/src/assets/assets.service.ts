@@ -1,10 +1,11 @@
 
 import { PrismaService } from '@/prisma/prisma.service';
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AssetStatus, Prisma, UserRole } from '../../generated/prisma/client';
 import { AssignedAssetDto } from './dto/assign.asset.dto';
 import { AssetHistoryAction } from '../../generated/prisma/enums';
+import { UpdateAssetStatusDto } from './dto/update-asset.dto';
 
 @Injectable()
 export class AssetsService {
@@ -121,6 +122,8 @@ export class AssetsService {
           assetId: id,
           employeeId: dto.assignedToId,
           performedById: user.id,
+          previousStatus: asset.status,
+          newStatus: AssetStatus.ASSIGNED,
         },
       });
 
@@ -161,6 +164,8 @@ export class AssetsService {
           assetId: id,
           employeeId: previousEmployeeId,
           performedById: user.id,
+          previousStatus: asset.status,
+          newStatus: AssetStatus.AVAILABLE,
         },
       });
 
@@ -172,6 +177,10 @@ export class AssetsService {
     const asset = await this.prisma.asset.findMany({
       where: { id },
     });
+
+    if (!asset) {
+      throw new NotFoundException('Not found');
+    }
 
     const history = await this.prisma.assetHistory.findMany({
       where: { assetId: id },
@@ -185,5 +194,53 @@ export class AssetsService {
     }
 
     return history;
+  }
+
+  async updateStatus(id: number, dto: UpdateAssetStatusDto, userId: number) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id },
+    })
+
+    if (!asset) {
+      throw new NotFoundException('Not found')
+    }
+
+    if (asset.status === AssetStatus.ASSIGNED &&
+      ( dto.status === AssetStatus.MAINTENANCE || dto.status === AssetStatus.RETIRED )) {
+      throw new BadRequestException('Unassign the asset first')
+    }
+
+    if (asset.status === AssetStatus.RETIRED &&
+      (dto.status === AssetStatus.AVAILABLE || dto.status === AssetStatus.MAINTENANCE)) {
+        throw new BadRequestException('Retired assets cannot be reactivated')
+    }
+
+    if (dto.status === AssetStatus.ASSIGNED) {
+      throw new BadRequestException('Use the assign endpoint to assign an asset')
+    }
+
+    if (asset.status === dto.status) {
+      return asset;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedAsset = await tx.asset.update({
+        where: { id: asset.id },
+        data: { status: dto.status },
+      })
+
+      await tx.assetHistory.create({
+        data: {
+          action: AssetHistoryAction.STATUS_CHANGED,
+          assetId: asset.id,
+          employeeId: asset.assignedToId,
+          performedById: userId,
+          previousStatus: asset.status,
+          newStatus: dto.status,
+        },
+      })
+
+      return updatedAsset
+    })
   }
 }
