@@ -68,6 +68,7 @@ enum AssetCondition {
 enum AssetHistoryAction {
   ASSIGNED
   UNASSIGNED
+  STATUS_CHANGED
 }
 
 model User {
@@ -138,11 +139,14 @@ model AssetHistory {
   assetId Int
   asset   Asset @relation(fields: [assetId], references: [id])
 
-  employeeId Int
-  employee   User @relation("AssetHistoryEmployee", fields: [employeeId], references: [id])
+  employeeId Int?
+  employee   User? @relation("AssetHistoryEmployee", fields: [employeeId], references: [id])
 
   performedById Int
   performedBy   User @relation("AssetHistoryPerformedBy", fields: [performedById], references: [id])
+
+  previousStatus AssetStatus?
+  newStatus         AssetStatus?
 
   createdAt DateTime @default(now())
 }
