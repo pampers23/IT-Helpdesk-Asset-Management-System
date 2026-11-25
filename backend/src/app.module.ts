@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { AssetsModule } from './assets/assets.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AssetsModule } from './assets/assets.module';
     AuthModule,
     TicketsModule,
     AssetsModule,
+    MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
