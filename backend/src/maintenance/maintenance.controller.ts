@@ -48,7 +48,8 @@ export class MaintenanceController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMaintenanceStatusDto,
+    @CurrentUser() user: { id: number, role: UserRole }
   ) {
-    return this.maintenanceService.updateStatus(id, dto);
+    return this.maintenanceService.updateStatus(id, dto, user);
   }
 }

@@ -1,5 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { AssetStatus, MaintenanceStatus, UserRole } from 'generated/prisma/enums';
 import { Prisma } from 'generated/prisma/browser';
@@ -159,17 +159,22 @@ export class MaintenanceService {
     })
   }
 
-  async updateStatus(id: number, dto: UpdateMaintenanceStatusDto) {
+  async updateStatus(id: number, dto: UpdateMaintenanceStatusDto, user: { id: number, role: UserRole }) {
     const maintenance = await this.prisma.maintenanceRecord.findUnique({
       where: { id },
       select: {
         status: true,
-        completedAt: true
+        completedAt: true,
+        assignedToId: true,
       }
     });
 
     if (!maintenance) {
       throw new NotFoundException('Maintenance record not found')
+    }
+
+    if (user.role === UserRole.IT_TECHNICIAN && maintenance.assignedToId !== user.id) {
+      throw new ForbiddenException('You can only update maintenance assigned to you')
     }
 
     if (maintenance.status === MaintenanceStatus.COMPLETED || maintenance.status === MaintenanceStatus.CANCELLED) {
